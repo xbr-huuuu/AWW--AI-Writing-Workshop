@@ -120,14 +120,22 @@ def cmd_report():
 
 def cmd_analyze():
     """分析豆瓣Top100书籍"""
+    from knowledge_base.book_analyzer import get_analyzed_book_ids
+
+    already = len(get_analyzed_book_ids())
+    remaining = len(DOUBAN_TOP100) - already
+
     print("\n📖 豆瓣Top100书籍分析器")
-    print(f"   共 {len(DOUBAN_TOP100)} 本书待分析\n")
+    print(f"   总计 {len(DOUBAN_TOP100)} 本 | 已分析 {already} 本 | 剩余 {remaining} 本\n")
 
-    limit_str = input(f"分析前几本？（默认20，最多{len(DOUBAN_TOP100)}）：").strip()
+    if remaining == 0:
+        print("全部书籍已分析完毕。")
+        return
+
+    limit_str = input(f"本次分析几本？（默认20，最多{remaining}）：").strip()
     limit = int(limit_str) if limit_str.isdigit() else 20
-    limit = min(limit, len(DOUBAN_TOP100))
 
-    print("\n开始分析（每个分析需调用一次LLM，耗时较长）...\n")
+    print("\n开始分析（已分析过的自动跳过）...\n")
 
     from agents.llm_client import llm
 

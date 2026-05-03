@@ -60,13 +60,44 @@ def generate_book_feature(book: dict, llm_call) -> dict:
     return features
 
 
-def batch_analyze_top100(llm_call, limit: int = 20):
-    """批量分析Top100书籍并存入知识库"""
-    for i, book in enumerate(DOUBAN_TOP100[:limit]):
-        print(f"[{i+1}/{limit}] 分析《{book['title']}》...")
+def get_analyzed_book_ids() -> set:
+    """获取向量库中已分析过的书籍ID"""
+    try:
+        existing = store.books_collection.get()
+        return set(existing.get("ids", []))
+    except Exception:
+        return set()
+
+
+def batch_analyze_top100(llm_call, limit: Optional[int] = None):
+    """批量分析Top100书籍并存入知识库，自动跳过已分析的"""
+    already_done = get_analyzed_book_ids()
+    total = len(DOUBAN_TOP100)
+    limit = limit or total
+
+    # 筛出待分析的书
+    pending = []
+    for book in DOUBAN_TOP100:
+        book_id = f"book_{book['title'].replace(' ', '_')}"
+        if book_id not in already_done:
+            pending.append(book)
+
+    skipped = total - len(pending)
+    if skipped > 0:
+        print(f"已分析 {skipped} 本，跳过。剩余 {len(pending)} 本待分析。\n")
+
+    count = min(limit, len(pending))
+    if count == 0:
+        print("所有书籍均已分析完毕，无需重复。")
+        return
+
+    for i, book in enumerate(pending[:count]):
+        print(f"[{i+1}/{count}] 分析《{book['title']}》...")
         try:
             generate_book_feature(book, llm_call)
             print(f"  ✓ 《{book['title']}》分析完成")
         except Exception as e:
             print(f"  ✗ 《{book['title']}》分析失败: {e}")
-    print(f"\n全部完成，共分析 {limit} 本书")
+
+    done_now = min(count, len(pending))
+    print(f"\n本次分析 {done_now} 本，知识库累计 {skipped + done_now} 本")
