@@ -1,191 +1,192 @@
-# AI Writing Workshop (AI写作工坊)
+# AI 写作工坊
 
-> 学习豆瓣Top100写法 · 多Agent协作 · 边写边进化
+> 让 AI 学习豆瓣 Top100 经典写法，在你的创作过程中持续进化，越写越好。
 
-一个基于大语言模型的多Agent写作系统。通过向量知识库学习豆瓣Top100经典书籍的写作技法，在创作过程中持续自我反思和经验积累，实现"越写越好"的进化效果。
+## 它解决了什么问题
 
-## 核心架构
+直接让 AI 写小说，往往风格单一、缺乏深度、每一章质量雷同。
+
+本系统通过四个 Agent 协作 + 向量知识库 + 自我反思循环，让 AI 在写作过程中**不断积累经验**，每写完一章就变得更懂怎么写好下一章。
+
+## 写作流程
 
 ```
-架构师 → 作家 → 批评家 → 修订者 → 自我反思 → 存入经验库
-   ↑                                          ↓
-   └────────── 经验库反馈到下一章 ───────────────┘
+你输入：书名、类型、前提
+        ↓
+   🧠 架构师   →  设计30章全局大纲（参考豆瓣Top100同类书籍结构）
+        ↓
+   ✍️ 作家     →  写初稿（融合Top100文风和你的历史成功技法）
+        ↓
+   🔍 批评家   →  打分评审，指出具体问题（对标Top100经典标准）
+        ↓
+   🔧 修订者   →  根据意见逐条修改
+        ↓
+   💾 自我反思 →  总结本章技法得失，存入经验库
+        ↓
+   📡 进化信号 →  下一章写作时，优先检索过去高分技法作为参考
 ```
-
-### 四个Agent
-
-| Agent | 职责 | 参考数据 |
-|-------|------|---------|
-| **架构师** | 设计章节结构、节奏、大纲 | Top100同类书籍结构 + 历史成功结构 |
-| **作家** | 根据大纲创作正文 | Top100文风指纹 + 已验证写作技巧 |
-| **批评家** | 对标Top100标准评审打分 | Top100经典标准 + 历史评审维度 |
-| **修订者** | 根据评审意见修改定稿 | 编辑的具体修改建议 |
-
-### 进化机制
-
-1. **自我反思循环**：每章写完自动复盘，总结"什么技巧有效？"
-2. **经验向量化**：成功技法存入ChromaDB，可被未来检索
-3. **动态Few-Shot**：下次写作时，优先检索自己过去高分章节的技法作为参考
-4. **进化信号**：系统自动跟踪评分趋势，生成写作能力的元反馈
 
 ## 快速开始
 
-### 1. 安装依赖
+### 1. 装依赖
 
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-### 2. 配置API Key
+### 2. 配 API Key
 
-**方式一：环境变量（推荐，不泄露Key到文件）**
+**临时生效（每次打开终端都要执行）：**
 
-**macOS / Linux / Git Bash：**
-```bash
-export DEEPSEEK_API_KEY="sk-你的key"
-```
-
-**Windows PowerShell：**
 ```powershell
+# PowerShell
 $env:DEEPSEEK_API_KEY = "sk-你的key"
+
+# 验证是否生效
+python -c "import os; print('OK' if os.getenv('DEEPSEEK_API_KEY') else 'FAIL')"
 ```
 
-**Windows CMD：**
-```cmd
-set DEEPSEEK_API_KEY=sk-你的key
-```
+**永久生效：** 开始菜单搜"环境变量" → 新建用户变量 → 变量名 `DEEPSEEK_API_KEY` → 值填你的 Key。
 
-> **注意**：PowerShell 必须用 `$env:XXX` 语法，不能用 `set`（那是CMD的语法）。用错会导致 `os.getenv()` 读到空值，API调用返回 `Authentication Fails`。
+> 也支持 OpenAI / Anthropic Claude / 第三方中转 API，见 [API 配置](#api-配置)。
 
-**永久生效（Windows）：** 开始菜单搜索"环境变量" → 新建用户变量 → 变量名 `DEEPSEEK_API_KEY` → 值填你的Key。
+### 3. 分析豆瓣 Top100（首次必做）
 
-**方式二：直接编辑 config.py**
-
-修改 `config.py` 第13行，将空字符串替换为你的Key：
-```python
-deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "sk-你的key")
-```
-
-**支持的其他API：**
-
-| 后端 | 环境变量 | 说明 |
-|------|----------|------|
-| DeepSeek（默认） | `DEEPSEEK_API_KEY` | 默认 base_url: `https://api.deepseek.com` |
-| OpenAI | `OPENAI_API_KEY` | 可选设置 `OPENAI_BASE_URL` |
-| Anthropic Claude | `ANTHROPIC_API_KEY` | 模型名需含 "claude" |
-| 其他兼容接口 | `OPENAI_API_KEY` + `OPENAI_BASE_URL` | 如中转API、本地Ollama等 |
-
-**自定义模型名：**
-```bash
-# 如果默认的 deepseek-v4-pro 不可用，可覆盖
-export ARCHITECT_MODEL="deepseek-chat"
-export WRITER_MODEL="deepseek-chat"
-export CRITIC_MODEL="deepseek-chat"
-export REVISER_MODEL="deepseek-chat"
-```
-
-### 3. 分析豆瓣Top100书籍（首次使用）
-
-```bash
+```powershell
 python main.py analyze
 ```
 
-### 4. 开始写作
+系统逐本分析经典书籍的文风、结构、技法，存入向量库。分析 10 本约 3 分钟。
 
-```bash
-# 初始化新小说
+### 4. 创建你的小说
+
+```powershell
 python main.py init
-
-# 逐章写作
-python main.py write
-
-# 批量写作（如连续写5章）
-python main.py batch 5
-
-# 查看进化报告
-python main.py report
-
-# 查看知识库统计
-python main.py stats
 ```
 
-## 配置说明
+按提示输入书名、类型、一句话前提、章节数，系统自动生成完整大纲。
 
-编辑 `config.py` 修改以下配置：
+### 5. 开始写
 
-| 配置项 | 默认值 | 说明 |
-|--------|--------|------|
-| `deepseek_api_key` | `$DEEPSEEK_API_KEY` | DeepSeek API Key |
-| `deepseek_base_url` | `https://api.deepseek.com` | DeepSeek API地址 |
-| `architect_model` | `deepseek-v4-pro` | 架构师模型 |
-| `writer_model` | `deepseek-v4-pro` | 作家模型 |
-| `critic_model` | `deepseek-v4-pro` | 批评家模型 |
-| `reviser_model` | `deepseek-v4-pro` | 修订者模型 |
-| `max_chapter_words` | `4000` | 每章目标字数 |
-| `experience_retrieval_k` | `5` | 每次检索的经验条数 |
-| `top100_retrieval_k` | `3` | 每次检索的Top100参考数 |
+```powershell
+python main.py write     # 写一章
+python main.py batch 5   # 连续写 5 章
+python main.py report    # 看进化报告
+```
 
-## 技术栈
+## 命令速查
 
-- **LLM**: OpenAI API / Anthropic Claude API
-- **向量数据库**: ChromaDB
-- **多Agent框架**: 自建编排层（可替换为AutoGen/CrewAI）
-- **嵌入模型**: ChromaDB内置 all-MiniLM-L6-v2
+| 命令 | 做什么 | 多久用一次 |
+|------|--------|-----------|
+| `python main.py analyze` | 分析更多豆瓣 Top100 书 | 首次 + 想补充时 |
+| `python main.py init` | 创建新小说 | 每本书一次 |
+| `python main.py write` | 写下一章（交互式） | 每次写作 |
+| `python main.py batch N` | 一口气写 N 章 | 想批量产出时 |
+| `python main.py report` | 看进化报告（评分趋势） | 随时 |
+| `python main.py stats` | 看知识库数据量 | 随时 |
+| `python check_api.py` | 诊断 API 连接 | 遇到认证错误时 |
 
 ## 项目结构
 
 ```
 书/
-├── config.py                    # 配置 + 豆瓣Top100书目
-├── main.py                      # CLI入口
-├── workflow.py                  # 核心工作流引擎
-├── agents/                      # 多Agent系统
-│   ├── architect.py             # 架构师Agent
-│   ├── writer.py                # 作家Agent
-│   ├── critic.py                # 批评家Agent
-│   └── reviser.py               # 修订者Agent
-├── knowledge_base/              # 知识库模块
-│   ├── vector_store.py          # ChromaDB向量存储
-│   ├── book_analyzer.py         # 书籍文风分析器
-│   └── style_extractor.py       # 文风指纹提取器
-└── memory/                      # 记忆进化模块
-    ├── experience_log.py        # 经验日志系统
-    └── dynamic_fewshot.py       # 动态Few-Shot检索
+├── main.py                      ← 入口，所有命令在这里
+├── config.py                    ← 配置 + 豆瓣 Top100 书目
+├── workflow.py                  ← 核心引擎，编排整个写作流程
+├── check_api.py                 ← API 连接诊断工具
+├── requirements.txt
+│
+├── agents/                      ← 四个写作 Agent
+│   ├── architect.py             #   架构师：设计大纲和节奏
+│   ├── writer.py                #   作家：生成正文
+│   ├── critic.py                #   批评家：评审打分
+│   └── reviser.py               #   修订者：修改定稿
+│
+├── knowledge_base/              ← 知识库（豆瓣书籍 + 写作经验）
+│   ├── vector_store.py          #   ChromaDB 向量存储
+│   ├── book_analyzer.py         #   书籍文风分析
+│   └── style_extractor.py       #   文风指纹提取
+│
+├── memory/                      ← 记忆系统（实现"进化"）
+│   ├── experience_log.py        #   自我反思 + 经验存档
+│   └── dynamic_fewshot.py       #   动态检索成功技法
+│
+└── data/                        ← 运行中产生的数据（不提交 git）
+    ├── vector_db/               #   向量数据库
+    ├── novels/                  #   你的书稿
+    └── experience/              #   经验日志
+```
+
+## 书稿在哪
+
+```
+data/novels/你的书名/
+├── outline.json           # 全局大纲（可读的 JSON）
+├── chapters.json           # 章节索引（含每章评分）
+├── chapter_001.txt         # 每章独立文件
+├── chapter_002.txt
+├── ...
+└── 你的书名_全文.txt       # 整本合订
+```
+
+## API 配置
+
+### 默认后端：DeepSeek
+
+```powershell
+$env:DEEPSEEK_API_KEY = "sk-你的key"
+```
+
+### 切换到其他后端
+
+| 后端 | 环境变量 | 额外设置 |
+|------|----------|---------|
+| DeepSeek | `DEEPSEEK_API_KEY` | 无 |
+| OpenAI | `OPENAI_API_KEY` | 可选 `OPENAI_BASE_URL` |
+| Claude | `ANTHROPIC_API_KEY` | 模型名需含 "claude" |
+| 中转 API | `OPENAI_API_KEY` | 必须设 `OPENAI_BASE_URL` |
+
+### 自定义模型名
+
+```powershell
+$env:ARCHITECT_MODEL = "你的模型"
+$env:WRITER_MODEL    = "你的模型"
+$env:CRITIC_MODEL    = "你的模型"
+$env:REVISER_MODEL   = "你的模型"
 ```
 
 ## 故障排查
 
-### API 认证失败：`Authentication Fails (governor)`
+### 认证失败：`Authentication Fails`
 
-1. **先确认API Key有效**：运行诊断脚本
-   ```powershell
-   python check_api.py
-   ```
-   该脚本测试 4 种 base_url × model 组合，找出可用的配置。
-
-2. **检查环境变量**：执行以下命令确认Key是否被正确读取
+1. 确认 Key 已加载：
    ```powershell
    python -c "import os; print(os.getenv('DEEPSEEK_API_KEY')[:15])"
    ```
-   - 如果输出为空 → 环境变量未设置或语法错误
-   - PowerShell 用户：必须用 `$env:DEEPSEEK_API_KEY = "..."` 而非 `set`
-   - CMD 用户：必须用 `set DEEPSEEK_API_KEY=...` 而非 `$env:`
+   输出空 → PowerShell 语法错误。必须用 `$env:XXX = "..."` 不能 `set`。
 
-3. **如果环境变量有效但仍失败**：可能 base_url 多了/少了 `/v1`
-   - 在 PowerShell 中测试：`$env:DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"` 或去掉 `/v1`
+2. 测试 API 连接：
+   ```powershell
+   python check_api.py
+   ```
+   会自动测试多个 base_url × model 组合，告诉你哪个能用。
 
-4. **模型名不匹配**：部分 DeepSeek 账号的 `deepseek-v4-pro` 可能映射为 `deepseek-chat`，可用 `check_api.py` 验证。
+3. 如果还是失败，尝试带 `/v1` 的地址：
+   ```powershell
+   $env:DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+   ```
 
-### ChromaDB 初始化失败
+### 模型下载很慢
 
-ChromaDB 依赖 sqlite3，Windows 上极少数情况会缺。解决方法：
+首次运行会自动下载嵌入模型（~80MB），国内用户已配置 HuggingFace 镜像，约 4 分钟完成。如果仍然慢，手动设：
+
 ```powershell
-pip install chromadb --upgrade
+$env:HF_ENDPOINT = "https://hf-mirror.com"
 ```
 
-### 首次运行 `analyze` 极慢
+### 大纲生成被截断
 
-每分析一本书需调用一次LLM，10本书约 3-5 分钟。这是正常的，数据存入向量库后可以反复使用。
+`max_tokens` 对 30 章大纲偏小，已默认为 16000。如果章节特别多（50章+），在 `agents/architect.py` 第 150 行增大 `max_tokens`。
 
 ## License
 
