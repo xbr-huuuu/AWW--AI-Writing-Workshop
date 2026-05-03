@@ -4,7 +4,13 @@ API连接诊断脚本 —— 测试DeepSeek API是否可用
 """
 from openai import OpenAI
 
-API_KEY = "sk-0caaef224d0049ccb7af362612c994e5"
+import os
+API_KEY = os.getenv("DEEPSEEK_API_KEY") or os.getenv("OPENAI_API_KEY") or ""
+if not API_KEY:
+    print("⚠ 请先设置环境变量：")
+    print("  PowerShell: $env:DEEPSEEK_API_KEY = \"sk-你的key\"")
+    print("  CMD:       set DEEPSEEK_API_KEY=sk-你的key")
+    exit(1)
 
 print("=" * 50)
 print("🔍 DeepSeek API 连接诊断")
